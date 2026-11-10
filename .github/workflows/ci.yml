@@ -18,7 +18,7 @@ jobs:
       pwsh: ${{ steps.filter.outputs.pwsh }}
       docs: ${{ steps.filter.outputs.docs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -41,7 +41,7 @@ jobs:
     if: needs.changes.outputs.zsh == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install system dependencies
         run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh shellcheck
       - name: Smoke and Unit tests
@@ -62,7 +62,7 @@ jobs:
     if: needs.changes.outputs.zsh == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install shellcheck
         run: brew install shellcheck
       - name: Syntax checks
@@ -96,7 +96,7 @@ jobs:
         shell: pwsh
         working-directory: powershell
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup PowerShell Profile (CI style)
         run: |
           $ErrorActionPreference = 'Stop'
@@ -154,7 +154,7 @@ jobs:
     if: needs.changes.outputs.docs == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check Shell scripts syntax
         run: |
           bash -n install.sh
