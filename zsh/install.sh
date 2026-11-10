@@ -13,20 +13,27 @@ set -euo pipefail
 
 RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[0;33m'; CYAN=$'\033[0;36m'; BOLD=$'\033[1m'; NC=$'\033[0m'
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/zsh_profile"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
 STATE_FILE="$STATE_DIR/install.state"
+LEGACY_STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh_profile/install.state"
 
-# Resolve repo directory: when piped via curl, clone to ~/.zsh_profile_repo
+# Resolve repo directory: when piped via curl, clone to ~/.dotfiles
 REPO_DIR=""
-REPO_URL="https://github.com/AndersonTavares0/zsh_profile.git"
-REPO_CLONE_DIR="$HOME/.zsh_profile_repo"
+REPO_URL="https://github.com/AndersonTavares0/dotfiles.git"
+REPO_CLONE_DIR="$HOME/.dotfiles"
 
 if [[ "${BASH_SOURCE[0]:-}" != "" && "${BASH_SOURCE[0]}" != "bash" ]]; then
-  REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [[ -f "$_DIR/.zshrc" && -d "$_DIR/modules" ]]; then
+    REPO_DIR="$_DIR"
+  elif [[ -d "$_DIR/zsh" ]]; then
+    REPO_DIR="$_DIR/zsh"
+  fi
+  unset _DIR
 fi
 
 ensure_repo() {
-  if [[ -n "$REPO_DIR" ]]; then
+  if [[ -n "$REPO_DIR" && -d "$REPO_DIR" ]]; then
     return 0
   fi
   if [[ -d "$REPO_CLONE_DIR/.git" ]]; then
@@ -34,12 +41,12 @@ ensure_repo() {
     if ! git -C "$REPO_CLONE_DIR" pull --ff-only 2>/dev/null; then
       printf "${YELLOW}Warning: could not update repo clone — using existing copy${NC}\n"
     fi
-    REPO_DIR="$REPO_CLONE_DIR"
+    REPO_DIR="$REPO_CLONE_DIR/zsh"
     return 0
   fi
-  printf "${CYAN}Cloning repository...${NC}\n"
+  printf "${CYAN}Cloning dotfiles repository...${NC}\n"
   git clone --depth=1 "$REPO_URL" "$REPO_CLONE_DIR"
-  REPO_DIR="$REPO_CLONE_DIR"
+  REPO_DIR="$REPO_CLONE_DIR/zsh"
 }
 
 # ─── Utility functions ───────────────────────────────────────────────────────
@@ -65,6 +72,10 @@ remove_install_state() {
   if [[ -f "$STATE_FILE" ]]; then
     rm -f "$STATE_FILE"
     rmdir "$STATE_DIR" 2>/dev/null || true
+  fi
+  if [[ -n "${LEGACY_STATE_FILE:-}" && -f "$LEGACY_STATE_FILE" ]]; then
+    rm -f "$LEGACY_STATE_FILE"
+    rmdir "$(dirname "$LEGACY_STATE_FILE")" 2>/dev/null || true
   fi
 }
 

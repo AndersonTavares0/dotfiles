@@ -19,8 +19,8 @@ if (Test-Path $localSetup -PathType Leaf) {
     return
 }
 
-$setupUrl = 'https://raw.githubusercontent.com/AndersonTavares0/config-powershell7/main/setup.ps1'
-$tempSetup = Join-Path $env:TEMP "config-powershell7-setup-$([guid]::NewGuid().ToString('N')).ps1"
+$setupUrl = 'https://raw.githubusercontent.com/AndersonTavares0/dotfiles/main/powershell/setup.ps1'
+$tempSetup = Join-Path $env:TEMP "dotfiles-pwsh-setup-$([guid]::NewGuid().ToString('N')).ps1"
 try {
     if ($PSVersionTable.PSVersion.Major -lt 6) {
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12

@@ -22,7 +22,7 @@ if ($script:IsWin) {
 }
 
 $script:RepoOwner  = 'AndersonTavares0'
-$script:RepoName   = 'config-powershell7'
+$script:RepoName   = 'dotfiles'
 $script:RepoZipUrl = "https://api.github.com/repos/$script:RepoOwner/$script:RepoName/releases/latest"
 
 if (-not (Get-Variable -Name InstallerNonInteractive -Scope Script -ErrorAction SilentlyContinue)) {

@@ -1,0 +1,86 @@
+
+*.7z
+*.arj
+# Arquivos que contém senhas, chaves de API e tokens
+# --- Backup e Temporários ---
+*.bak
+*.bak.*
+# Binários gerados pelo zcompile
+*.bz2
+*.cab
+# Cache de plugins e autocompletar
+# Compressed files
+*.coverage
+.coverage
+coverage/
+# Coverage and testing
+*.deb
+*.diff
+.DS_Store
+# Editor/IDE files
+*.env.*
+.env
+.env.*
+# Environment files
+.env.local
+# Evita subir o seu histórico pessoal de comandos
+# Gerados pelas funções 'sedi', 'bk' e pelo sistema
+.graphify_*
+# --- Graphify Knowledge Graph ---
+graphify-out/
+# Graphify temporary and output files
+*.gz
+htmlcov/
+.idea/
+# --- IDE e Sistema ---
+*.log
+# Logs
+# --- Logs e Histórico ---
+*.lz
+*.lz4
+*.lzh
+*.lzo
+# Machine-specific module override
+modules/99-local.ps1
+modules/*/bin/
+modules/*/obj/
+# --- Performance e Compilação ---
+.planning/
+# Planning/GSD workflow state (internal)
+# PowerShell auto-generated formats
+# PowerShell modules cache
+# PowerShell profiles and temporary files
+*.ps1xml
+*.rar
+*.rpm
+# --- Segredos e Variáveis de Ambiente ---
+.specs/
+# Specs de desenvolvimento (local only)
+# --- Specs (tlc-spec-driven planning, not for distribution) ---
+*.swo
+*.swp
+# System files
+*.tar
+*.tar.bz2
+*.tar.gz
+*.tar.xz
+*.tar.zst
+*.temp
+test_*
+# --- Test Dependencies ---
+.test-deps/
+!tests/
+*.tgz
+# The harness normally uses the XDG cache, but also ignore a local override.
+Thumbs.db
+*.tmp
+.vscode/
+*.xz
+*.Z
+.zcompdump*
+*.zip
+.zsh_history
+zsh_plugins_init.zsh
+.zshrc.local
+*.zst
+*.zwc
