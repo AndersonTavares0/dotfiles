@@ -66,18 +66,21 @@ if ($osVersion.Major -lt 10 -or -not [Environment]::Is64BitOperatingSystem -or $
 
 # Constants
 $repoOwner   = 'AndersonTavares0'
-$repoName    = 'config-powershell7'
+$repoName    = 'dotfiles'
 $repoReleaseUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/latest"
 $localAppData = [Environment]::GetFolderPath('LocalApplicationData')
 if ([string]::IsNullOrWhiteSpace($localAppData)) {
     $localAppData = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'AppData\Local'
 }
-$repoDefaultDir = Join-Path $localAppData $repoName
+$repoDefaultDir = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dotfiles'
 
 # Helpers
 
 function Test-IsValidRepo {
     param([string]$Path)
+    if (Test-Path -LiteralPath (Join-Path $Path 'powershell/Microsoft.PowerShell_profile.ps1') -PathType Leaf) {
+        return $true
+    }
     foreach ($requiredFile in @('Microsoft.PowerShell_profile.ps1', 'modules/config/config.ps1', 'setup/setup.ps1', 'lib/executable.ps1')) {
         if (-not (Test-Path -LiteralPath (Join-Path $Path $requiredFile) -PathType Leaf)) { return $false }
     }
@@ -93,12 +96,17 @@ function Invoke-Launcher {
         [switch]$InstallFastfetch,
         [switch]$InstallTopgrade
     )
-    $setupEntryPoint = Join-Path $RepoPath 'setup\setup.ps1'
+    $pwshRoot = if (Test-Path -LiteralPath (Join-Path $RepoPath 'powershell/setup/setup.ps1') -PathType Leaf) {
+        Join-Path $RepoPath 'powershell'
+    } else {
+        $RepoPath
+    }
+    $setupEntryPoint = Join-Path $pwshRoot 'setup\setup.ps1'
     if (-not (Test-Path -LiteralPath $setupEntryPoint -PathType Leaf)) {
         Write-Host "Setup directory not found. The repository may be outdated." -ForegroundColor Red
         return $false
     }
-    . (Join-Path $RepoPath 'lib/executable.ps1')
+    . (Join-Path $pwshRoot 'lib/executable.ps1')
 
     if ($PSVersionTable.PSVersion.Major -lt 7) {
         $pwshPath = Get-PwshExecutablePath
@@ -159,7 +167,7 @@ function Invoke-Launcher {
             }
         }
 
-        $launcherArgs = @('-NoProfile', '-File', $setupEntryPoint, '-RepoPath', $RepoPath)
+        $launcherArgs = @('-NoProfile', '-File', $setupEntryPoint, '-RepoPath', $pwshRoot)
         if ($NonInteractive) { $launcherArgs += '-NonInteractive' }
         if ($Gui) { $launcherArgs += '-Gui' }
         if ($ThemeName) { $launcherArgs += @('-ThemeName', $ThemeName) }
@@ -168,7 +176,7 @@ function Invoke-Launcher {
         & $pwshPath @launcherArgs | Out-Host
         return $LASTEXITCODE -eq 0
     }
-    . $setupEntryPoint -RepoPath $RepoPath -NonInteractive:$NonInteractive `
+    . $setupEntryPoint -RepoPath $pwshRoot -NonInteractive:$NonInteractive `
         -ThemeName $ThemeName -Gui:$Gui -InstallFastfetch:$InstallFastfetch -InstallTopgrade:$InstallTopgrade | Out-Host
     return $true
 }

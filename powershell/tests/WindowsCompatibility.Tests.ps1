@@ -276,7 +276,7 @@ try {
                 if ($worker.Arguments[0].Extent.Text -match 'NeedDownload') {
                     $null = $ps.AddParameter('NeedDownload', $false)
                     $null = $ps.AddParameter('RepoZipUrl', 'https://example.test/release')
-                    $null = $ps.AddParameter('RepoName', 'config-powershell7')
+                    $null = $ps.AddParameter('RepoName', 'dotfiles')
                     $null = $ps.AddParameter('Params', @{})
                 }
                 $null = $ps.Invoke()
@@ -319,7 +319,7 @@ try {
                 [IO.File]::WriteAllText($path, '# previous')
             }
             Assert-True (Download-Repo -TargetDir $target) 'Valid repository update failed'
-            $backups = @(Get-ChildItem -LiteralPath $testRoot -Directory -Force | Where-Object { $_.Name -like '.config-powershell7-previous-*' -and (Test-Path -LiteralPath (Join-Path $_.FullName 'user.txt')) })
+            $backups = @(Get-ChildItem -LiteralPath $testRoot -Directory -Force | Where-Object { ($_.Name -like '.config-powershell7-previous-*' -or $_.Name -like '.dotfiles-previous-*') -and (Test-Path -LiteralPath (Join-Path $_.FullName 'user.txt')) })
             Assert-True ($backups.Count -gt 0) 'Old repository and user additions were deleted instead of retained'
         }
     }

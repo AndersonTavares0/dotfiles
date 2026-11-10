@@ -309,7 +309,7 @@ try {
 
     $content = Get-Content $testProfilePath -Raw
     Assert-True -Condition ($content -match 'Microsoft\.PowerShell_profile\.ps1') -TestName "Profile contains dot-source reference"
-    Assert-True -Condition ($content -match '# >>> config-powershell7 >>>') -TestName "Profile contains managed block"
+    Assert-True -Condition ($content -match '# >>> (?:config-powershell7|dotfiles) >>>') -TestName "Profile contains managed block"
     Assert-False -Condition ($content -match '__PROFILE_REPO_ROOT') -TestName "Profile does not persist repo path in environment"
 
     $result2 = Install-Profile -RepoPath $testRepoDir

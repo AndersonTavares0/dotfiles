@@ -1,10 +1,18 @@
-name: Full Validation
+name: CI - PowerShell Profile
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'powershell/**'
+      - 'install.ps1'
+      - '.github/workflows/ci-powershell.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'powershell/**'
+      - 'install.ps1'
+      - '.github/workflows/ci-powershell.yml'
   workflow_dispatch:
 
 permissions:
@@ -20,6 +28,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
+        working-directory: powershell
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,6 +85,7 @@ jobs:
 
       - name: Windows compatibility regressions (Windows PowerShell 5.1)
         shell: powershell
+        working-directory: powershell
         run: |
           & ./tests/WindowsCompatibility.Tests.ps1
 
@@ -90,10 +100,6 @@ jobs:
           & ./tests/Test-ProfileInstallation.ps1 -Detailed
 
   installer:
-    # Full end-to-end install on a disposable runner. Manual only:
-    # installs real packages (PS7 dependencies and fonts) and takes minutes.
-    # OneDrive redirection and clicked-through GUI stay on the VM checklist
-    # (docs/validacao-vm.md) — runners cannot cover them faithfully.
     if: github.event_name == 'workflow_dispatch'
     needs: suites
     runs-on: windows-latest
@@ -101,6 +107,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
+        working-directory: powershell
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -133,7 +140,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $target = $PROFILE.CurrentUserAllHosts
           $content = Get-Content $target -Raw -ErrorAction Stop
-          if ($content -notmatch '# >>> config-powershell7 >>>') { throw 'Managed block missing from profile.' }
+          if ($content -notmatch '# >>> (?:config-powershell7|dotfiles) >>>') { throw 'Managed block missing from profile.' }
           if ($content -notmatch 'CI-OWNED-USER-CONTENT-DO-NOT-REMOVE') { throw 'User-owned profile content was destroyed.' }
           $hashes = Get-FileHash $target -Algorithm SHA256
           $stateDir = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }
@@ -146,11 +153,10 @@ jobs:
 
       - name: Re-run via Windows PowerShell 5.1 (delegation + idempotency)
         shell: powershell
+        working-directory: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           & ./setup.ps1 -NonInteractive -InstallFastfetch -InstallTopgrade
-          # NOTE: under 5.1, $PROFILE points at WindowsPowerShell. The managed
-          # profile lives at the PS7 path captured in the previous step.
           $stateDir = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }
           $state = Get-Content (Join-Path $stateDir 'validate-state.json') -Raw | ConvertFrom-Json
           $target = $state.Target
@@ -197,7 +203,7 @@ jobs:
           $target = $PROFILE.CurrentUserAllHosts
           if (Test-Path $target) {
             $content = Get-Content $target -Raw -ErrorAction SilentlyContinue
-            if ($content -match '# >>> config-powershell7 >>>') { throw 'Managed block survived uninstall.' }
+            if ($content -match '# >>> (?:config-powershell7|dotfiles) >>>') { throw 'Managed block survived uninstall.' }
             if ($content -notmatch 'CI-OWNED-USER-CONTENT-DO-NOT-REMOVE') { throw 'Uninstall destroyed user content.' }
           }
           Write-Host 'Uninstall restored user state.'

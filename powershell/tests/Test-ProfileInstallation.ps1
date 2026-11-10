@@ -100,7 +100,7 @@ $profilePath = if ($allHostsProfile -and (Test-Path $allHostsProfile)) { $allHos
 if (Test-Path $profilePath) {
     $content = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
 
-    if ($content -match '(?m)^# >>> config-powershell7 >>>\s*$' -and
+    if ($content -match '(?m)^# >>> (?:config-powershell7|dotfiles) >>>\s*$' -and
         $content -match '(?m)^\.\s+(?:''[^'']*Microsoft\.PowerShell_profile\.ps1''|"[^"]*Microsoft\.PowerShell_profile\.ps1")\s*$') {
         script:Add-Check 'Profile' 'Type' 'PASS' 'Profile dot-sources the config'
     }

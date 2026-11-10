@@ -1,0 +1,36 @@
+[user]
+	name = Anderson Tavares
+	email = anderson.g.tavares@gmail.com
+
+[init]
+	defaultBranch = main
+
+[core]
+	autocrlf = input
+	editor = nano
+	fileMode = true
+	quotePath = false
+
+[pull]
+	rebase = false
+
+[push]
+	autoSetupRemote = true
+
+[alias]
+	st = status -sb
+	co = checkout
+	br = branch
+	ci = commit
+	cm = commit -m
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+	unstage = reset HEAD --
+	last = log -1 HEAD
+
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
