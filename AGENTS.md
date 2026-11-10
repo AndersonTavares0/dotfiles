@@ -1,6 +1,6 @@
 # dotfiles — Agent & Engineering Guide
 
-Welcome to **Anderson Tavares's Dotfiles Monorepo**. This repository houses cross-platform modular configurations for **Zsh** (Linux/Fedora & macOS) and **PowerShell 7+** (Windows & PowerShell Core).
+This repository contains cross-platform modular configurations for **Zsh** (Linux/Fedora & macOS) and **PowerShell 7+** (Windows & PowerShell Core).
 
 ---
 
@@ -8,59 +8,86 @@ Welcome to **Anderson Tavares's Dotfiles Monorepo**. This repository houses cros
 
 ```text
 dotfiles/
-├── .github/workflows/          # CI Matrix (Ubuntu, macOS, Windows 2022/2025)
+├── .github/
+│   ├── workflows/              # Unified CI (ci.yml), Releases (release.yml)
+│   └── dependabot.yml          # Automated weekly dependency scanner
 ├── install.sh                  # Root Unix installer (delegates to zsh/install.sh)
 ├── install.ps1                 # Root Windows installer (delegates to powershell/setup.ps1)
+├── check.sh                    # Universal local validation suite (ZUnit, Bats, syntax)
 ├── zsh/                        # Fedora-first Zsh environment (Oh My Zsh + P10k)
 ├── powershell/                 # Windows-first PowerShell 7+ environment (Oh My Posh)
-├── shared/                     # Shared configs (git, fastfetch, cheatsheet)
-└── docs/                       # Monorepo architecture & cross-shell documentation
+├── shared/                     # Shared configurations (git, fastfetch, cheatsheets)
+└── docs/                       # Architecture diagrams and cross-shell references
 ```
 
-### Isolation Boundary
-- Changes affecting **Zsh** belong exclusively in `zsh/`.
-- Changes affecting **PowerShell** belong exclusively in `powershell/`.
-- Root bootstrappers (`install.sh`, `install.ps1`) delegate into subsystem entrypoints. Never break standalone execution of `zsh/install.sh` or `powershell/setup.ps1`.
+### Subsystem Boundaries
+- **Zsh domain**: Changes affecting Zsh live strictly under `zsh/`.
+- **PowerShell domain**: Changes affecting PowerShell live strictly under `powershell/`.
+- **Shared domain**: Cross-shell tools, Fastfetch, and Git configurations live under `shared/`.
+- **Root installers**: `install.sh` and `install.ps1` delegate to subsystem entrypoints. Never break standalone execution of `zsh/install.sh` or `powershell/setup.ps1`.
 
 ---
 
-## 2. Zsh Subsystem Rules (`zsh/`)
+## 2. Quality Gates & Validation Harness
 
-### Execution Order in `.zshrc`
-1. **Powerlevel10k Instant Prompt** MUST be the very first line sourced (zero output before this).
-2. **Boot timer starts** immediately after prompt initialization.
-3. **Environment & PATH deduplication** (`core/environment.zsh`).
-4. **Plugin init cache** (`plugins/cache.zsh`) validates tool versions via `cksum` before loading frameworks.
+Every change must pass local checks before creating a commit or pull request.
+
+### Local Test Harness
+Run the unified checker from the repository root:
+```bash
+./check.sh
+```
+This suite verifies:
+1. Shell syntax integrity across bash and zsh (`bash -n`, `zsh -n`).
+2. ShellCheck static analysis when available.
+3. Complete Zsh test suite (42 ZUnit assertions + 4 Bats integration tests).
+4. Git working tree cleanliness.
+
+### Subsystem-Specific Suites
+- **Zsh direct test runner**:
+  ```bash
+  ./zsh/tests/run.sh
+  ```
+- **PowerShell direct test runner** (via `pwsh`):
+  ```powershell
+  pwsh -File powershell/tests/Unit.Tests.ps1 -Verbose
+  pwsh -File powershell/tests/Microsoft.PowerShell_profile.Tests.ps1 -Verbose
+  pwsh -File powershell/tests/Setup.Tests.ps1 -Verbose
+  pwsh -File powershell/tests/WindowsCompatibility.Tests.ps1
+  ```
+
+---
+
+## 3. Zsh Subsystem Rules (`zsh/`)
+
+### Initialization Sequence in `.zshrc`
+1. **Powerlevel10k Instant Prompt** must be the first line sourced. No output prior to this line.
+2. **Boot timer start** immediately follows instant prompt.
+3. **Environment and PATH deduplication** via `core/environment.zsh`.
+4. **Plugin init cache** (`plugins/cache.zsh`) validates binary fingerprints before sourcing OMZ.
 5. **Oh My Zsh & plugins** (`plugins/omz.zsh`).
 6. **Aliases & functions** (`tools/aliases.zsh`, `tools/functions.zsh`, `tools/nvidia.zsh`).
-7. **Local overrides** (`tools/local.zsh` for `~/.zshrc.local`).
+7. **Local overrides** (`tools/local.zsh` targeting `~/.zshrc.local`).
 8. **Theme loading** (`boot/theme.zsh`).
-9. **Bytecode compilation** (`boot/compile.zsh` via background `zcompile`).
+9. **Bytecode compilation** (`boot/compile.zsh` executing background `zcompile`).
 10. **Timer end** (`boot/timer-end.zsh`).
 
-### Security Hooks
-- `zshaddhistory`: Silently blocks credential patterns from history (`TOKEN`, `SECRET`, `PASSWORD`, `API_KEY`, URL tokens, AWS credentials, SSH keys, GPG passphrases, commands > 4096 chars).
-- `sudo-last`: Blocks dangerous commands (`rm -rf /`, `mkfs`, `dd of=`, `chmod -R 777 /`) and requires confirmation for other root actions.
-
-### Testing Zsh
-Always run tests from repository root or `zsh/`:
-```bash
-./zsh/tests/run.sh
-```
-This executes `zsh -n` syntax check, `bash -n`, ZUnit suite (42 tests), and Bats install suite.
+### Security Guards
+- `zshaddhistory`: Blocks secret assignments (`TOKEN`, `SECRET`, `PASSWORD`, `API_KEY`), URL credentials, AWS tokens, SSH keys, GPG passphrases, and commands exceeding 4096 characters from entering command history.
+- `sudo-last`: Traps dangerous commands (`rm -rf /`, `mkfs`, `dd of=`, `chmod -R 777 /`) and prompts for interactive confirmation on privileged commands.
 
 ---
 
-## 3. PowerShell Subsystem Rules (`powershell/`)
+## 4. PowerShell Subsystem Rules (`powershell/`)
 
 ### Strict Mode & Error Handling
-- Every script MUST declare `#Requires -Version 5.1`.
-- `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` during profile and module loading.
-- Revert `$ErrorActionPreference` to user's interactive preference upon exit.
-- No bare `catch {}` blocks — always log `$_.Exception.Message`.
+- Scripts declare `#Requires -Version 5.1`.
+- Enforce `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` during profile initialization.
+- Restore `$ErrorActionPreference` to user default upon exit.
+- Log error messages explicitly in catch blocks: `$_.Exception.Message`.
 
-### Profile Target & Managed Block
-- Target: `$PROFILE.CurrentUserAllHosts`.
+### Profile Markers
+- Profile target: `$PROFILE.CurrentUserAllHosts`.
 - Marker block:
   ```powershell
   # >>> dotfiles >>>
@@ -68,26 +95,40 @@ This executes `zsh -n` syntax check, `bash -n`, ZUnit suite (42 tests), and Bats
   . '<dotfiles_path>\powershell\Microsoft.PowerShell_profile.ps1'
   # <<< dotfiles <<<
   ```
-- Retain backward compatibility: `powershell/setup/modules/profile.ps1` recognizes both `config-powershell7` and `dotfiles` stubs to ensure seamless upgrades without duplicate execution.
+- Preserve backward compatibility: detect both legacy `# Generated by config-powershell7 installer` and current `# Generated by dotfiles installer` stubs.
 
-### Plugin Boot Cache
-- Managed by `modules/cache/cache.ps1` with 24-hour TTL.
-- Fingerprints `oh-my-posh` and `zoxide` using `LastWriteTime` + file size.
-- Hot path takes <5ms validation skipping `Get-Command` and hash recalculation.
-
-### Testing PowerShell
-Run tests using `pwsh`:
-```powershell
-pwsh -File powershell/tests/Unit.Tests.ps1 -Verbose
-pwsh -File powershell/tests/Microsoft.PowerShell_profile.Tests.ps1 -Verbose
-pwsh -File powershell/tests/Setup.Tests.ps1 -Verbose
-pwsh -File powershell/tests/WindowsCompatibility.Tests.ps1
-```
+### Cache Strategy
+- File: `modules/cache/cache.ps1` with 24-hour TTL.
+- Validate binary state via `LastWriteTime` and file size.
+- Maintain boot latency under 150ms.
 
 ---
 
-## 4. Git & Commit Guidelines
+## 5. CI/CD Governance & GitHub Ruleset
 
-- Format: Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).
-- Specify scope when applicable: `feat(zsh): ...`, `fix(pwsh): ...`, `refactor(ci): ...`.
-- Never bypass linting or tests before committing.
+### Repository Ruleset: `main-protection`
+- Target: `~DEFAULT_BRANCH` (`main`).
+- Direct pushes and branch deletions are blocked.
+- Linear history is enforced.
+- Required status check: **`ci-gate`**.
+- Merge mechanism: Pull Request with passing `ci-gate`.
+
+### Unified CI Pipeline (`.github/workflows/ci.yml`)
+- Uses `dorny/paths-filter` to detect changed paths (`zsh/**`, `powershell/**`, `docs/**`).
+- Only changed subsystems trigger heavy runner matrixes (Ubuntu, macOS, Windows 2022, Windows 2025).
+- The `ci-gate` aggregator evaluates required checks and reports a single status to the Ruleset.
+
+### Release Pipeline (`.github/workflows/release.yml`)
+- Triggered by pushing a version tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+- Packages distribution tarballs (`.tar.gz` and `.zip`) and generates release notes automatically.
+
+---
+
+## 6. Commit & Documentation Standards
+
+- **Commit Format**: Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).
+- **Commit Scopes**: Use specific scopes (`feat(zsh): ...`, `fix(pwsh): ...`, `chore(ci): ...`).
+- **Attribution**: Commits must use Anderson Tavares's GitHub credentials:
+  - Name: `Anderson Tavares`
+  - Email: `168309107+AndersonTavares0@users.noreply.github.com` (or `anderson.g.tavares@gmail.com`)
+- **Documentation Style**: Clean, technical, and objective. Zero emojis across all documentation files.
