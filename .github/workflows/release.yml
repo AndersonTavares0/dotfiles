@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build archives
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          ARCHIVE_BASE="dotfiles-${TAG_NAME}"
+          
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="${ARCHIVE_BASE}/" "${GITHUB_REF}" > "dist/${ARCHIVE_BASE}.tar.gz"
+          git archive --format=zip --prefix="${ARCHIVE_BASE}/" "${GITHUB_REF}" > "dist/${ARCHIVE_BASE}.zip"
+          
+          ls -lh dist/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG_NAME" dist/* \
+            --title "Release $TAG_NAME" \
+            --generate-notes

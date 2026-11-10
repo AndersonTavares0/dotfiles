@@ -2,8 +2,7 @@
 
 > Cross-platform, high-performance personal development environment for Linux (Fedora-first), macOS, and Windows.
 
-[![CI - Zsh Profile](https://github.com/AndersonTavares0/dotfiles/actions/workflows/ci-zsh.yml/badge.svg)](https://github.com/AndersonTavares0/dotfiles/actions/workflows/ci-zsh.yml)
-[![CI - PowerShell Profile](https://github.com/AndersonTavares0/dotfiles/actions/workflows/ci-powershell.yml/badge.svg)](https://github.com/AndersonTavares0/dotfiles/actions/workflows/ci-powershell.yml)
+[![CI](https://github.com/AndersonTavares0/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/AndersonTavares0/dotfiles/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue?logo=powershell)
 ![Zsh](https://img.shields.io/badge/Zsh-5.9%2B-f15a24?logo=zsh&logoColor=white)
