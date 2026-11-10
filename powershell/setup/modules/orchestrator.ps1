@@ -1,0 +1,342 @@
+#Requires -Version 5.1
+# Install/uninstall orchestrators
+
+function Start-ProfileInstall {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepoPath,
+
+        [bool]$InstallPS7 = $true,
+        [bool]$InstallGit = $true,
+        [bool]$InstallOMP = $true,
+        [bool]$InstallZoxide = $true,
+        [bool]$InstallFont = $true,
+        [bool]$InstallModules = $true,
+        [bool]$InstallTopgrade = $false,
+        [bool]$InstallFastfetch = $false,
+        [bool]$InstallScoop = $false,
+        [bool]$InstallAntigravity = $false,
+        [bool]$InstallOpenCode = $false,
+        [bool]$InstallCodex = $false,
+        [bool]$InstallClaudeCode = $false,
+        [string]$ScoopBuckets = '',
+        [string]$ThemeName = '',
+        [string]$TerminalThemeName = '',
+        [bool]$TerminalThemeWT = $false
+    )
+
+    try {
+        $script:_installResults = @()
+
+        function Add-Result {
+            param([string]$Name, [bool]$Success, [string]$Detail, [string]$Status = '')
+            if ($Status) {
+                $finalStatus = $Status
+            } elseif ($Success) {
+                $finalStatus = 'ok'
+            } else {
+                $finalStatus = 'fail'
+            }
+            $script:_installResults += @{
+                Name   = $Name
+                Status = $finalStatus
+                Detail = $Detail
+            }
+        }
+
+        $repoExists = Test-Path (Join-Path $RepoPath 'Microsoft.PowerShell_profile.ps1')
+        Add-Result -Name 'Repository' -Success $repoExists -Detail $(if ($repoExists) { $RepoPath } else { 'not found' })
+
+        $step = 0
+        $totalSteps = 1
+        if ($InstallPS7)    { $totalSteps++ }
+        if ($InstallGit)    { $totalSteps++ }
+        if ($InstallOMP)    { $totalSteps++ }
+        if ($InstallZoxide) { $totalSteps++ }
+        if ($InstallFont)   { $totalSteps++ }
+        if ($InstallModules) { $totalSteps++ }
+        if ($InstallOMP) { $totalSteps++ }
+        $totalSteps++
+        if ($TerminalThemeName) {
+            if ($TerminalThemeWT) { $totalSteps++ }
+        }
+        if ($InstallTopgrade)   { $totalSteps++ }
+        if ($InstallFastfetch)  { $totalSteps++ }
+        if ($InstallScoop)      { $totalSteps++ }
+        if ($InstallAntigravity) { $totalSteps++ }
+        if ($InstallOpenCode) { $totalSteps++ }
+        if ($InstallCodex) { $totalSteps++ }
+        if ($InstallClaudeCode) { $totalSteps++ }
+
+        Write-GuiLog '' -Type Info
+        Write-GuiLog 'STARTING INSTALLATION' -Type Step
+        Write-GuiLog '' -Type Info
+
+        $environment = Get-InstallerEnvironment
+        Write-GuiLog "Environment: Windows $($environment.OSVersion), $($environment.Architecture), PowerShell $($environment.PowerShellVersion), administrator=$($environment.IsAdministrator)." -Type Info
+        Write-GuiLog "Package tools: WinGet=$($environment.HasWinGet), Scoop=$($environment.HasScoop), Node.js=$($environment.HasNode), npm=$($environment.HasNpm)." -Type Info
+
+        $resolvedProfile = Get-ProfilePath
+        $resolvedDocs = [Environment]::GetFolderPath('MyDocuments')
+        Write-GuiLog "Profile path: $resolvedProfile" -Type Info
+        Write-GuiLog "Documents path: $resolvedDocs" -Type Info
+        if (Test-DocumentsRedirected) {
+            Write-GuiLog 'Documents folder is redirected (OneDrive/Group Policy). All paths resolved via .NET APIs.' -Type Warn
+        }
+        Write-GuiLog '' -Type Info
+
+        $step++
+        Write-GuiLog "[$step/$totalSteps] Checking ExecutionPolicy..." -Type Step
+        $currentPolicy = Get-ExecutionPolicy -ErrorAction SilentlyContinue
+        $policyAllowsProfile = $currentPolicy -in @('Bypass', 'RemoteSigned', 'Unrestricted')
+        if ($policyAllowsProfile) {
+            Write-GuiLog "Effective ExecutionPolicy: $currentPolicy." -Type Ok
+        } else {
+            Write-GuiLog "Effective ExecutionPolicy '$currentPolicy' can block this unsigned profile. Review Get-ExecutionPolicy -List." -Type Warn
+        }
+        # Reported, never mutated. A locked-down policy is a warning about the host,
+        # not an installation failure, so it must not fail the whole run.
+        Add-Result -Name 'ExecutionPolicy' -Success $policyAllowsProfile -Detail $currentPolicy `
+            -Status $(if ($policyAllowsProfile) { 'ok' } else { 'skip' })
+
+        if ($InstallPS7) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Checking PowerShell 7..." -Type Step
+            $r = Install-PowerShell7
+            $exe = Get-Executable -Name 'pwsh'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($r) { 'installed' } else { 'failed' }
+            Add-Result -Name 'PowerShell 7' -Success $r -Detail $detail
+        } else {
+            Add-Result -Name 'PowerShell 7' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallGit) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Checking Git..." -Type Step
+            $r = Install-Git
+            $exe = Get-Executable -Name 'git'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($r) { 'installed' } else { 'failed' }
+            Add-Result -Name 'Git' -Success $r -Detail $detail
+        } else {
+            Add-Result -Name 'Git' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallOMP) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Checking Oh My Posh..." -Type Step
+            $r = Install-OhMyPosh
+            $exe = Get-Executable -Name 'oh-my-posh'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($r) { 'installed' } else { 'failed' }
+            Add-Result -Name 'Oh My Posh' -Success $r -Detail $detail
+        } else {
+            Add-Result -Name 'Oh My Posh' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallZoxide) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Checking Zoxide..." -Type Step
+            $r = Install-Zoxide
+            $exe = Get-Executable -Name 'zoxide'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($r) { 'installed' } else { 'failed' }
+            Add-Result -Name 'Zoxide' -Success $r -Detail $detail
+        } else {
+            Add-Result -Name 'Zoxide' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallFont) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Checking FiraCode Nerd Font..." -Type Step
+            $rFont = Install-NerdFont
+            Add-Result -Name 'FiraCode Nerd Font' -Success $rFont -Detail $(if ($rFont) { 'installed' } else { 'failed' })
+
+            # Installing the font is not enough: Windows Terminal keeps its own face name.
+            if ($rFont -and (Get-WindowsTerminalSettingsPath)) {
+                $rWTFont = Set-WindowsTerminalFont
+                Add-Result -Name 'WT Font Face' -Success $rWTFont -Detail $(if ($rWTFont) { 'FiraCode Nerd Font' } else { 'failed' })
+            } else {
+                Add-Result -Name 'WT Font Face' -Success $false -Detail 'Windows Terminal not installed' -Status 'skip'
+            }
+        } else {
+            Add-Result -Name 'FiraCode Nerd Font' -Success $false -Detail 'not selected' -Status 'skip'
+            Add-Result -Name 'WT Font Face' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallModules) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Installing PowerShell modules..." -Type Step
+            $rMods = Install-PSModules
+            $modDetails = @()
+            foreach ($modName in @('PSReadLine', 'Terminal-Icons')) {
+                $m = Get-Module -ListAvailable -Name $modName -ErrorAction SilentlyContinue |
+                    Sort-Object Version -Descending | Select-Object -First 1
+                if ($m) { $modDetails += "$($modName) $($m.Version)" }
+            }
+            $detail = if ($modDetails.Count -gt 0) { $modDetails -join ', ' } elseif ($rMods) { 'installed' } else { 'failed' }
+            Add-Result -Name 'PowerShell Modules' -Success $rMods -Detail $detail
+        } else {
+            Add-Result -Name 'PowerShell Modules' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallOMP) {
+            # config.ps1 falls back to 'atomic' when CONFIG_PWSH7_THEME is unset, so the default
+            # install has to fetch that theme too or the prompt starts unthemed.
+            $effectiveTheme = if ($ThemeName) { $ThemeName } else { 'atomic' }
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Downloading OMP theme '$effectiveTheme'..." -Type Step
+            $rTheme = Install-OmpTheme -ThemeName $effectiveTheme -RepoPath $RepoPath
+            Add-Result -Name "OMP Theme ($effectiveTheme)" -Success $rTheme -Detail $(if ($rTheme) { 'downloaded' } else { 'failed' })
+        } else {
+            Add-Result -Name 'OMP Theme' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        $step++
+        Write-GuiLog "[$step/$totalSteps] Configuring profile..." -Type Step
+        $rProfile = Install-Profile -RepoPath $RepoPath -ThemeName $ThemeName
+        Add-Result -Name 'Profile' -Success $rProfile -Detail $(if ($rProfile) { 'linked' } else { 'failed' })
+
+        if ($InstallFastfetch) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Installing Fastfetch..." -Type Step
+            $rFastfetch = Install-Fastfetch
+            $exe = Get-Executable -Name 'fastfetch'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($rFastfetch) { 'installed' } else { 'failed' }
+            Add-Result -Name 'Fastfetch' -Success $rFastfetch -Detail $detail
+        } else {
+            Add-Result -Name 'Fastfetch' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($TerminalThemeName) {
+            if ($TerminalThemeWT) {
+                $step++
+                Write-GuiLog "[$step/$totalSteps] Applying terminal theme '$TerminalThemeName' to Windows Terminal..." -Type Step
+                if (-not (Get-WindowsTerminalSettingsPath)) {
+                    # Windows Terminal is optional on Windows 10; its absence is not an install failure.
+                    Write-GuiLog 'Windows Terminal is not installed; skipping its color scheme.' -Type Warn
+                    Add-Result -Name "WT Color Scheme ($TerminalThemeName)" -Success $false -Detail 'Windows Terminal not installed' -Status 'skip'
+                } else {
+                    $rWTTheme = Set-WindowsTerminalColorScheme -ThemeName $TerminalThemeName
+                    Add-Result -Name "WT Color Scheme ($TerminalThemeName)" -Success $rWTTheme -Detail $(if ($rWTTheme) { 'configured' } else { 'failed' })
+                }
+            } else {
+                Add-Result -Name "WT Color Scheme" -Success $false -Detail 'not selected' -Status 'skip'
+            }
+        } else {
+            Add-Result -Name 'Terminal Color Theme' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallTopgrade) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Installing Topgrade..." -Type Step
+            $rTopgrade = Install-Topgrade
+            $exe = Get-Executable -Name 'topgrade'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($rTopgrade) { 'installed' } else { 'failed' }
+            Add-Result -Name 'Topgrade' -Success $rTopgrade -Detail $detail
+        } else {
+            Add-Result -Name 'Topgrade' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        if ($InstallScoop) {
+            $step++
+            Write-GuiLog "[$step/$totalSteps] Installing Scoop..." -Type Step
+            $buckets = if ($ScoopBuckets) { $ScoopBuckets -split ',' | ForEach-Object { $_.Trim() } } else { @() }
+            $rScoop = Install-Scoop -Buckets $buckets
+            $exe = Get-Executable -Name 'scoop'
+            $detail = if ($exe -and $exe.Version) { $exe.Version } elseif ($rScoop) { 'installed' } else { 'failed' }
+            Add-Result -Name 'Scoop' -Success $rScoop -Detail $detail
+        } else {
+            Add-Result -Name 'Scoop' -Success $false -Detail 'not selected' -Status 'skip'
+        }
+
+        $agentCliOptions = @(
+            @{ Name = 'Antigravity'; Selected = $InstallAntigravity }
+            @{ Name = 'OpenCode'; Selected = $InstallOpenCode }
+            @{ Name = 'Codex'; Selected = $InstallCodex }
+            @{ Name = 'ClaudeCode'; Selected = $InstallClaudeCode }
+        )
+        foreach ($agentCli in $agentCliOptions) {
+            if (-not $agentCli.Selected) {
+                Add-Result -Name $agentCli.Name -Success $false -Detail 'not selected' -Status 'skip'
+                continue
+            }
+            $step++
+            $spec = Get-AgentCliInstallSpec -Name $agentCli.Name
+            Write-GuiLog "[$step/$totalSteps] Installing $($spec.DisplayName)..." -Type Step
+            $installed = Install-AgentCli -Name $agentCli.Name
+            $command = Get-Command $spec.Command -ErrorAction SilentlyContinue
+            $detail = if ($command) { $command.Source } elseif ($installed) { 'installed' } else { 'failed' }
+            Add-Result -Name $spec.DisplayName -Success $installed -Detail $detail
+        }
+
+        Write-InstallSummary -Results $script:_installResults
+
+        Write-GuiLog '' -Type Info
+        Write-GuiLog 'Installation complete!' -Type Step
+        Write-GuiLog '' -Type Info
+        Write-GuiLog "Profile:  $(Get-ProfilePath)" -Type Info
+        Write-GuiLog "Repo:     $RepoPath" -Type Info
+
+        $themeName = if ($ThemeName) { $ThemeName } else { 'atomic' }
+        Write-GuiLog "Theme:    $themeName" -Type Info
+
+        $cachePath = if ($script:IsWin) {
+            Join-Path $HOME '.cache_pwsh_plugins.ps1'
+        } else {
+            $xdgCache = if ($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } else { Join-Path $HOME '.cache' }
+            Join-Path (Join-Path $xdgCache 'pwsh') 'plugins_cache.ps1'
+        }
+        $cacheNote = if (Test-Path $cachePath) { 'exists' } else { 'on next launch' }
+        Write-GuiLog "Cache:    $cachePath ($cacheNote)" -Type Info
+
+        Write-GuiLog '' -Type Info
+        Write-GuiLog 'Terminal: Restart recommended to apply changes' -Type Ok
+
+        $hasFailures = @($script:_installResults | Where-Object { $_.Status -eq 'fail' }).Count -gt 0
+        $sync = Get-Variable -Name SyncHash -Scope Script -ValueOnly -ErrorAction SilentlyContinue
+        if ($sync) { $sync.InstallComplete = $true; $sync.InstallFailed = $hasFailures }
+        return -not $hasFailures
+
+    } catch {
+        Write-GuiLog "CRITICAL ERROR: $($_.Exception.Message)" -Type Fail
+        $sync = Get-Variable -Name SyncHash -Scope Script -ValueOnly -ErrorAction SilentlyContinue
+        if ($sync) { $sync.InstallComplete = $true; $sync.InstallFailed = $true }
+        return $false
+    }
+}
+
+function Start-ProfileUninstall {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepoPath
+    )
+
+    try {
+        Write-GuiLog '' -Type Info
+        Write-GuiLog 'STARTING UNINSTALL' -Type Step
+        Write-GuiLog '' -Type Info
+
+        $profileResult = Uninstall-Profile -RepoPath $RepoPath
+        Write-GuiLog '' -Type Info
+        Write-GuiLog 'UNINSTALL COMPLETE' -Type Step
+        Write-GuiLog '' -Type Info
+        Write-GuiLog 'Manual cleanup (optional):' -Type Info
+        Write-GuiLog '  Uninstall-Module Terminal-Icons -Force' -Type Info
+        Write-GuiLog '  Uninstall-Module PSReadLine -Force' -Type Info
+        Write-GuiLog '  winget uninstall JanDeDobbeleer.OhMyPosh' -Type Info
+        Write-GuiLog '  winget uninstall ajeetdsouza.zoxide' -Type Info
+        Write-GuiLog '  winget uninstall Git.Git' -Type Info
+        Write-GuiLog '  winget uninstall Fastfetch-cli.Fastfetch' -Type Info
+        Write-GuiLog '  winget uninstall topgrade-rs.topgrade' -Type Info
+        Write-GuiLog '  npm uninstall --global opencode-ai' -Type Info
+        Write-GuiLog '  Remove agent CLIs with their official uninstall instructions.' -Type Info
+
+        $sync = Get-Variable -Name SyncHash -Scope Script -ValueOnly -ErrorAction SilentlyContinue
+        if ($sync) { $sync.InstallComplete = $true; $sync.InstallFailed = -not $profileResult }
+        return $profileResult
+
+    } catch {
+        Write-GuiLog "ERROR: $($_.Exception.Message)" -Type Fail
+        $sync = Get-Variable -Name SyncHash -Scope Script -ValueOnly -ErrorAction SilentlyContinue
+        if ($sync) { $sync.InstallComplete = $true; $sync.InstallFailed = $true }
+        return $false
+    }
+}

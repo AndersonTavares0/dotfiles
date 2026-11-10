@@ -1,0 +1,75 @@
+# PowerShell modules cache
+modules/*/bin/
+modules/*/obj/
+
+# PowerShell profiles and temporary files
+*.bak
+*.tmp
+*.temp
+*.diff
+test_*
+!tests/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage and testing
+coverage/
+htmlcov/
+.coverage
+*.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# Graphify temporary and output files
+.graphify_*
+graphify-out/
+
+# Planning/GSD workflow state (internal)
+.planning/
+
+# Machine-specific module override
+modules/99-local.ps1
+
+# PowerShell auto-generated formats
+*.ps1xml
+# Specs de desenvolvimento (local only)
+.specs/
+
