@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2059,SC1091
 # ==============================================================================
 # Anderson's Dotfiles — Universal Unix Bootstrapper (Linux / macOS)
 #
