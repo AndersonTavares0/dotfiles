@@ -95,6 +95,10 @@ read_choice() {
 
 do_install_required() {
   local pkg="$1"
+  if command -v zsh &>/dev/null && command -v git &>/dev/null; then
+    printf "${GREEN}Required packages (zsh, git) already installed.${NC}\n"
+    return 0
+  fi
   printf "${CYAN}Installing required packages (zsh, git)...${NC}\n"
   case "$pkg" in
     dnf)    sudo dnf install -y zsh git ;;
@@ -108,14 +112,23 @@ do_install_required() {
 
 do_install_optional() {
   local pkg="$1"
-  local tools="eza fzf zoxide"
-  printf "${CYAN}Installing optional tools (${tools})...${NC}\n"
+  local missing=()
+  for t in eza fzf zoxide; do
+    if ! command -v "$t" &>/dev/null; then
+      missing+=("$t")
+    fi
+  done
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    printf "${GREEN}Optional tools (eza, fzf, zoxide) already installed.${NC}\n"
+    return 0
+  fi
+  printf "${CYAN}Installing optional tools (${missing[*]})...${NC}\n"
   case "$pkg" in
-    dnf)    sudo dnf install -y eza fzf zoxide || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
-    apt)    sudo apt install -y eza fzf zoxide 2>/dev/null || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
-    pacman) sudo pacman -S --noconfirm eza fzf zoxide 2>/dev/null || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
-    zypper) sudo zypper install -y eza fzf zoxide 2>/dev/null || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
-    *)      printf "${YELLOW}Unknown package manager — skipping optional tools${NC}\n" ;;
+    dnf)    sudo dnf install -y "${missing[@]}" || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
+    apt)    sudo apt install -y "${missing[@]}" 2>/dev/null || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
+    pacman) sudo pacman -S --noconfirm "${missing[@]}" 2>/dev/null || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
+    zypper) sudo zypper install -y "${missing[@]}" 2>/dev/null || printf "${YELLOW}Warning: some optional tools could not be installed${NC}\n" ;;
+    *)      printf "${YELLOW}Unknown package manager — skip optional tools.${NC}\n" ;;
   esac
 }
 
